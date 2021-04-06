@@ -1,0 +1,83 @@
+<html>
+  <head>
+    <title>Advanced Tenant Management System</title>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <script type='text/javascript' src='./static/js/webapp.js'></script>
+    <script type='text/javascript'>
+        window.onload = function(e) {{
+            let droppable = document.getElementsByClassName("file_drop");
+            for (let i = 0; i < droppable.length; i++) {{
+                droppable[i].addEventListener('dragover', dragoverCallback, false);
+                droppable[i].addEventListener('drop', fileUploadCallback, false);
+            }}
+            populateAgents();
+            setInterval(populateAgents, {0});
+            setInterval(updateAgentsInfo, {1});
+            setInterval(updateTerminal, {2});
+        }}
+    </script>
+    <link href='./static/css/webapp.css' rel='stylesheet' type='text/css'/>
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <script type="text/javascript">
+      google.charts.load("current", {packages:["corechart"]});
+      google.charts.setOnLoadCallback(drawChart);
+      function drawChart() {
+        var data = google.visualization.arrayToDataTable([
+          ['Status', 'status'],
+          ['Registered',     11],
+          ['Get Quote',      2],
+          ['Invalid Quote',  2],
+          // ['Watch TV', 2],
+          // ['Sleep',    7]
+        ]);
+
+        var options = {
+          title: 'Agents Status Pie Chart',
+          pieHole: 0.4,
+          titleTextStyle: { 
+            fontSize: 25
+          },
+          colors:['lightgrey','lightgreen', '#ff6b6b'],
+          pieSliceTextStyle: {fontSize: 18},
+          legend: { 
+            textStyle: {
+              fontSize: 20
+            }
+          }
+  
+        };
+        var chart = new google.visualization.PieChart(document.getElementById('donutchart'));
+        function selectHandler() {
+          var selectedItem = chart.getSelection()[0];
+          if (selectedItem) {
+            var topping = data.getValue(selectedItem.row, 0);
+            alert('The user selected ' + topping);
+          }
+        }
+
+        google.visualization.events.addListener(chart, 'select', selectHandler);    
+        chart.draw(data, options);
+      }
+    </script>
+  </head>
+  <body>
+      <div id="header">
+          <div class="logo" title="Keylime">&nbsp;</div>
+          <div id="header_banner">
+              <h1>Keylime Advanced Tenant Management System</h1>
+          </div>
+          <div class="logo" style="float:right;" title="Keylime">&nbsp;</div>
+         <br style="clear:both;">
+      </div>
+      <div id="agent_body">
+          <div class="chart" id="donutchart" style="width: 50%; height: 500px; float:left"></div>
+          <div id="terminal-frame" style="width: 45%; height: 500px; float:right">
+              <div id="terminal-header" onmousedown="toggleVisibility('terminal')">Tenant Logs</div>
+              <div id="terminal"></div>
+          </div>
+      </div>    
+
+    
+
+  </body>
+</html>
