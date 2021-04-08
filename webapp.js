@@ -500,32 +500,28 @@ function renderSunburst(data) {
 	const root = partition(data);
 	root.each(d => d.current = d);
 
-	/* 
+	
 	// create an svg
-	const svg = d3.create("svg")
+	const svg = d3.select("#sunburst")
+		.append("svg")
   		.attr("viewBox", [0, 0, width, width])
 		.style("font", "10px sans-serif")
 		.style("width", "70%")
 		.style("height", "70%");
-	
+
 
 	const g = svg.append("g")
 		.attr("transform", `translate(${width / 2},${width / 2})`);
-	*/
 
 	const path = g.append("g")
 		.selectAll("path")
 		.data(root.descendants().slice(1))
-		.exit()
-		.remove()
-		.enter()
-		.transition()
-		.duration(750)
 		.join("path")
 			.attr("fill", d => { return color(d); })
 			.attr("fill-opacity", d => arcVisible(d.current) ? (d.children ? 0.6 : 0.4) : 0)
 			.attr("d", d => arc(d.current));
 
+	path.transition().duration(750);
 	path.filter(d => d.children)
 		.style("cursor", "pointer")
 		.on("click", clicked);
@@ -723,8 +719,8 @@ window.onload = function(e) {
 	}
 
 	// Populate agents on the page (and turn on auto-updates)
-	populateAgentsForPie();
-	setInterval(populateAgentsForPie, 20000);
+	renderCharts();
+	setInterval(renderCharts, 20000);
 	/*
 	populateAgents();
 	setInterval(populateAgents, 2000);
