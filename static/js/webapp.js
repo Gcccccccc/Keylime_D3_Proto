@@ -475,26 +475,26 @@ function renderSunburst(data) {
 
 	let color = (d) => {
 		while (d.depth > 1)
-		  d = d.parent;
+			d = d.parent;
 		if (d.data.name == "Registered") {
-		  return "rgb(111, 111, 111)";
+			return "rgb(111, 111, 111)";
 		} else if (d.data.name == "Get Quote") {
-		  return "rgb(29, 176, 0)";
+			return "rgb(29, 176, 0)";
 		} else if (d.data.name == "Invalid Quote") {
-		  return "rgb(219, 2, 2)";
+			return "rgb(219, 2, 2)";
 		} else if (d.data.name == "Start") {
-		  return "rgb(255, 255, 0)";
+			return "rgb(255, 255, 0)";
 		} else {
-		  return "black";
+			return "black";
 		}
-  	}
+		}
 	let partition = data => {
 		const root = d3.hierarchy(data)
 			.sum(d => d.value)
 			.sort((a, b) => b.value - a.value);
 		return d3.partition()
 			.size([2 * Math.PI, root.height + 1])
-	  		(root);
+				(root);
 	}	
 
 	const root = partition(data);
@@ -503,7 +503,7 @@ function renderSunburst(data) {
 	
 	// create an svg
 	const svg = d3.select("#sunburst svg")
-  		.attr("viewBox", [0, 0, width, width])
+			.attr("viewBox", [0, 0, width, width])
 		.style("font", "10px sans-serif")
 		.style("width", "35%")
 		.style("height", "35%");
@@ -564,21 +564,21 @@ function renderSunburst(data) {
 		// the next transition from the desired position.
 		path.transition(t)
 			.tween("data", d => {
-		  		const i = d3.interpolate(d.current, d.target);
-		  		return t => d.current = i(t);
+					const i = d3.interpolate(d.current, d.target);
+					return t => d.current = i(t);
 			})
-		  	.filter(function(d) {
+				.filter(function(d) {
 				return +this.getAttribute("fill-opacity") || arcVisible(d.target);
-		  	})
+				})
 			.attr("fill-opacity", d => arcVisible(d.target) ? (d.children ? 0.6 : 0.4) : 0)
 			.attrTween("d", d => () => arc(d.current));
 
 		label.filter(function(d) {
 			return +this.getAttribute("fill-opacity") || labelVisible(d.target);
- 	 	}).transition(t)
+			}).transition(t)
 			.attr("fill-opacity", d => +labelVisible(d.target))
 			.attrTween("transform", d => () => labelTransform(d.current));
-  	}
+		}
 
 	function arcVisible(d) {
 		return d.y1 <= 3 && d.y0 >= 1 && d.x1 > d.x0;
@@ -596,70 +596,70 @@ function renderSunburst(data) {
 }
 
 async function renderCharts() {
-  // "/v"+API_VERSION+"/"+res+"/"+resId
+	// "/v"+API_VERSION+"/"+res+"/"+resId
 
-  let response = await fetch(`/v${API_VERSION}/agents/`);
-  let json = await response.json();
-  if (!("results" in json)) {
+	let response = await fetch(`/v${API_VERSION}/agents/`);
+	let json = await response.json();
+	if (!("results" in json)) {
 		reportIssue("ERROR populateAgents: Malformed response for agent list refresh callback!");
 		return;
-  }
-  response = json["results"];
+	}
+	response = json["results"];
 
-  // Figure out which agent id we refer to
-  if (!("uuids" in response)) {
+	// Figure out which agent id we refer to
+	if (!("uuids" in response)) {
 		reportIssue("ERROR populateAgents: Cannot get uuid list from callback!");
 		return;
-  }
+	}
 
-  // Get list of agent ids from server
-  let agentIds = response["uuids"];
+	// Get list of agent ids from server
+	let agentIds = response["uuids"];
 
-  console.log(agentIds);
+	console.log(agentIds);
 
-  // status array
-  let status_array = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-  // sunburst chart data
-  let data = {
+	// status array
+	let status_array = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+	// sunburst chart data
+	let data = {
 		"name": "agents sunburst chart",
 		"children": []
-  }
-  // initialize status_array
-  for (let i = 0; i <= 10; i++) {
+	}
+	// initialize status_array
+	for (let i = 0; i <= 10; i++) {
 		data['children'].push({
 			"name": STR_MAPPINGS[i],
 			"children": []
 		})
-  }
+	}
 
-  // collect visualization data for pie chart and sunburst chart
-  let urls = [];
-  for (let i = 0; i < agentIds.length; i++) {
-    urls.push(`/v${API_VERSION}/agents/${agentIds[i]}`);
-  }
-  let requests = urls.map((url) => fetch(url));
-  Promise.all(requests)
-    .then((responses) => Promise.all(responses.map((res) => res.json())))
-    .then((dataItems) => {
-      dataItems.forEach((resJson) => {
-        let ss = resJson['results']['operational_state'];
-        let uuid = resJson['results']['id'];
-        status_array[ss]++;
-        data['children'][ss]['children'].push({
-          id: uuid,
-          value: 100,
-        });
-      });
-    })
+	// collect visualization data for pie chart and sunburst chart
+	let urls = [];
+	for (let i = 0; i < agentIds.length; i++) {
+		urls.push(`/v${API_VERSION}/agents/${agentIds[i]}`);
+	}
+	let requests = urls.map((url) => fetch(url));
+	Promise.all(requests)
+		.then((responses) => Promise.all(responses.map((res) => res.json())))
+		.then((dataItems) => {
+			dataItems.forEach((resJson) => {
+				let ss = resJson['results']['operational_state'];
+				let uuid = resJson['results']['id'];
+				status_array[ss]++;
+				data['children'][ss]['children'].push({
+					id: uuid,
+					value: 100,
+				});
+			});
+		})
 		.then(() => {
 			renderSunburst(data);
 			drawChart();
 		});
-  
+	
 
 
-  google.charts.load("current", {packages:["corechart"]});
-  google.charts.setOnLoadCallback(drawChart);
+	google.charts.load("current", {packages:["corechart"]});
+	google.charts.setOnLoadCallback(drawChart);
 	function drawChart() {
 		var data = google.visualization.arrayToDataTable([
 			['Status', 'status'],
