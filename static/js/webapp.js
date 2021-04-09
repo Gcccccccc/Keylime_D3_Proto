@@ -526,7 +526,7 @@ function renderSunburst(data) {
 		.on("click", clicked);
 
 	path.append("title")
-		.text(d =>{ console.log(d);return `${d.ancestors().map(d => d.data.name).reverse().join("/")}\n${(("children" in d) ? d.children.length: d['data']['id'])}`});
+		.text(d =>{ return `${d.ancestors().map(d => d.data.name).reverse().join("/")}\n${(("children" in d) ? d.children.length: d['data']['id'])}`;});
 
 	const label = d3.select("#label")
 		.attr("pointer-events", "none")
