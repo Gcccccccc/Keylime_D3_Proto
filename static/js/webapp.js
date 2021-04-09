@@ -475,26 +475,26 @@ function renderSunburst(data) {
 
 	let color = (d) => {
 		while (d.depth > 1)
-		  d = d.parent;
+			d = d.parent;
 		if (d.data.name == "Registered") {
-		  return "rgb(111, 111, 111)";
+			return "rgb(111, 111, 111)";
 		} else if (d.data.name == "Get Quote") {
-		  return "rgb(29, 176, 0)";
+			return "rgb(29, 176, 0)";
 		} else if (d.data.name == "Invalid Quote") {
-		  return "rgb(219, 2, 2)";
+			return "rgb(219, 2, 2)";
 		} else if (d.data.name == "Start") {
-		  return "rgb(255, 255, 0)";
+			return "rgb(255, 255, 0)";
 		} else {
-		  return "black";
+			return "black";
 		}
-  	}
+		}
 	let partition = data => {
 		const root = d3.hierarchy(data)
 			.sum(d => d.value)
 			.sort((a, b) => b.value - a.value);
 		return d3.partition()
 			.size([2 * Math.PI, root.height + 1])
-	  		(root);
+				(root);
 	}	
 
 	const root = partition(data);
@@ -503,7 +503,7 @@ function renderSunburst(data) {
 	
 	// create an svg
 	const svg = d3.select("#sunburst svg")
-  		.attr("viewBox", [0, 0, width, width])
+			.attr("viewBox", [0, 0, width, width])
 		.style("font", "10px sans-serif")
 		.style("width", "35%")
 		.style("height", "35%");
@@ -526,7 +526,7 @@ function renderSunburst(data) {
 		.on("click", clicked);
 
 	path.append("title")
-		.text(d =>{ console.log(d);return `${d.ancestors().map(d => d.data.name).reverse().join("/")}\n${(("children" in d) ? d.children.length: d['data']['id'])}`});
+		.text(d =>{ return `${d.ancestors().map(d => d.data.name).reverse().join("/")}\n${(("children" in d) ? d.children.length: d['data']['id'])}`;});
 
 	const label = d3.select("#label")
 		.attr("pointer-events", "none")
@@ -564,21 +564,21 @@ function renderSunburst(data) {
 		// the next transition from the desired position.
 		path.transition(t)
 			.tween("data", d => {
-		  		const i = d3.interpolate(d.current, d.target);
-		  		return t => d.current = i(t);
+					const i = d3.interpolate(d.current, d.target);
+					return t => d.current = i(t);
 			})
-		  	.filter(function(d) {
+				.filter(function(d) {
 				return +this.getAttribute("fill-opacity") || arcVisible(d.target);
-		  	})
+				})
 			.attr("fill-opacity", d => arcVisible(d.target) ? (d.children ? 0.6 : 0.4) : 0)
 			.attrTween("d", d => () => arc(d.current));
 
 		label.filter(function(d) {
 			return +this.getAttribute("fill-opacity") || labelVisible(d.target);
- 	 	}).transition(t)
+			}).transition(t)
 			.attr("fill-opacity", d => +labelVisible(d.target))
 			.attrTween("transform", d => () => labelTransform(d.current));
-  	}
+		}
 
 	function arcVisible(d) {
 		return d.y1 <= 3 && d.y0 >= 1 && d.x1 > d.x0;
@@ -596,116 +596,112 @@ function renderSunburst(data) {
 }
 
 async function renderCharts() {
-  // "/v"+API_VERSION+"/"+res+"/"+resId
+	// "/v"+API_VERSION+"/"+res+"/"+resId
 
-  let response = await fetch(`/v${API_VERSION}/agents/`);
-  let json = await response.json();
-  if (!("results" in json)) {
-	reportIssue("ERROR populateAgents: Malformed response for agent list refresh callback!");
-	return;
-  }
-  response = json["results"];
+	let response = await fetch(`/v${API_VERSION}/agents/`);
+	let json = await response.json();
+	if (!("results" in json)) {
+		reportIssue("ERROR populateAgents: Malformed response for agent list refresh callback!");
+		return;
+	}
+	response = json["results"];
 
-  // Figure out which agent id we refer to
-  if (!("uuids" in response)) {
-	reportIssue("ERROR populateAgents: Cannot get uuid list from callback!");
-	return;
-  }
-
-  // Get list of agent ids from server
-  let agentIds = response["uuids"];
-
-  console.log(agentIds);
-
-  // status array
-  let status_array = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-  // sunburst chart data
-  let data = {
-	"name": "agents sunburst chart",
-	"children": [
-	  // {
-	  //   "name": "registered",
-	  //   "children": [
-	  //   ]
-	  // },
-	  // {
-	  //   "name": "validated",
-	  //   "children": [
-	  //   ]
-	  // },
-	  // {
-	  //   "name": "invalidated",
-	  //   "children": [
-	  //   ]
-	  // }
-	]
-  }
-  // initialize status_array
-  for (let i = 0; i <= 10; i++) {
-	data['children'].push({
-	  "name": STR_MAPPINGS[i],
-	  "children": []
-	})
-  }
-
-  // collect visualization data for pie chart and sunburst chart
-  for (let i = 0; i < agentIds.length; i++) {
-	let agentResponse = await fetch(`/v${API_VERSION}/agents/${agentIds[i]}`);
-	let responseText = await agentResponse.json();
-	let ss = responseText["results"]["operational_state"];
-	let uuid = responseText["results"]["id"];
-	status_array[ss]++;
-	data['children'][ss]['children'].push({
-	  "id": uuid,
-	  "value": 100
-	})
-  }
-  console.log(data)
-  google.charts.load("current", {packages:["corechart"]});
-  google.charts.setOnLoadCallback(drawChart);
-  function drawChart() {
-	var data = google.visualization.arrayToDataTable([
-	  ['Status', 'status'],
-	  ['Registered', status_array[0]],
-	  ['Start', status_array[1]],
-	  ['Saved', status_array[2]],
-	  ['Get Quote', status_array[3]],
-	  ['Get Quote (retry)', status_array[4]],
-	  ['Provide V', status_array[5]],
-	  ['Provide V (retry)', status_array[6]],
-	  ['Failed', status_array[7]],
-	  ['Terminated', status_array[8]],
-	  ['Invalid Quote', status_array[9]],
-	  ['Tenant Quote Failed', status_array[10]]
-	]);
-
-	var options = {
-	  title: 'Agents Status Pie Chart',
-	  pieHole: 0.4,
-	  titleTextStyle: {
-		fontSize: 25
-	  },
-	  colors:['#BEBEBE', '#FFFF00', 'black', '#88FF99', 'black', 'black', 'black', 'black', 'black', '#FF6666', 'black'],
-	  pieSliceTextStyle: {fontSize: 18},
-	  legend: {
-		textStyle: {
-		  fontSize: 20
-		}
-	  }
-	};
-	var chart = new google.visualization.PieChart(document.getElementById('donutchart'));
-	function selectHandler() {
-	  var selectedItem = chart.getSelection()[0];
-	  if (selectedItem) {
-		var topping = data.getValue(selectedItem.row, 0);
-		alert('The user selected ' + topping);
-	  }
+	// Figure out which agent id we refer to
+	if (!("uuids" in response)) {
+		reportIssue("ERROR populateAgents: Cannot get uuid list from callback!");
+		return;
 	}
 
-	google.visualization.events.addListener(chart, 'select', selectHandler);
-	chart.draw(data, options);
-  }
-  renderSunburst(data)
+	// Get list of agent ids from server
+	let agentIds = response["uuids"];
+
+	console.log(agentIds);
+
+	// status array
+	let status_array = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+	// sunburst chart data
+	let data = {
+		"name": "agents sunburst chart",
+		"children": []
+	}
+	// initialize status_array
+	for (let i = 0; i <= 10; i++) {
+		data['children'].push({
+			"name": STR_MAPPINGS[i],
+			"children": []
+		})
+	}
+
+	// collect visualization data for pie chart and sunburst chart
+	let urls = [];
+	for (let i = 0; i < agentIds.length; i++) {
+		urls.push(`/v${API_VERSION}/agents/${agentIds[i]}`);
+	}
+	let requests = urls.map((url) => fetch(url));
+	Promise.all(requests)
+		.then((responses) => Promise.all(responses.map((res) => res.json())))
+		.then((dataItems) => {
+			dataItems.forEach((resJson) => {
+				let ss = resJson['results']['operational_state'];
+				let uuid = resJson['results']['id'];
+				status_array[ss]++;
+				data['children'][ss]['children'].push({
+					id: uuid,
+					value: 100,
+				});
+			});
+		})
+		.then(() => {
+			renderSunburst(data);
+			drawChart();
+		});
+	
+
+
+	google.charts.load("current", {packages:["corechart"]});
+	google.charts.setOnLoadCallback(drawChart);
+	function drawChart() {
+		var data = google.visualization.arrayToDataTable([
+			['Status', 'status'],
+			['Registered', status_array[0]],
+			['Start', status_array[1]],
+			['Saved', status_array[2]],
+			['Get Quote', status_array[3]],
+			['Get Quote (retry)', status_array[4]],
+			['Provide V', status_array[5]],
+			['Provide V (retry)', status_array[6]],
+			['Failed', status_array[7]],
+			['Terminated', status_array[8]],
+			['Invalid Quote', status_array[9]],
+			['Tenant Quote Failed', status_array[10]]
+		]);
+
+		var options = {
+			title: 'Agents Status Pie Chart',
+			pieHole: 0.4,
+			titleTextStyle: {
+			fontSize: 25
+			},
+			colors:['#BEBEBE', '#FFFF00', 'black', '#88FF99', 'black', 'black', 'black', 'black', 'black', '#FF6666', 'black'],
+			pieSliceTextStyle: {fontSize: 18},
+			legend: {
+			textStyle: {
+				fontSize: 20
+			}
+			}
+		};
+		var chart = new google.visualization.PieChart(document.getElementById('donutchart'));
+		function selectHandler() {
+			var selectedItem = chart.getSelection()[0];
+			if (selectedItem) {
+			var topping = data.getValue(selectedItem.row, 0);
+			alert('The user selected ' + topping);
+			}
+		}
+
+		google.visualization.events.addListener(chart, 'select', selectHandler);
+		chart.draw(data, options);
+	}
 }
 
 // Attach dragging capabilities for payload upload functionality
@@ -719,7 +715,7 @@ window.onload = function(e) {
 
 	// Populate agents on the page (and turn on auto-updates)
 	renderCharts();
-	setInterval(renderCharts, 10000);
+	setInterval(renderCharts, 20000);
 	/*
 	populateAgents();
 	setInterval(populateAgents, 2000);
