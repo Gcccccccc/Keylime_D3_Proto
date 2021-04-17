@@ -270,12 +270,6 @@ class WebAppHandler(BaseHandler):
                     </div>
 
                     <div class="chart" id="donutchart" style="width: 50%; height: 500px; float:left"></div>
-                    <div id="sunburst">
-                        <svg viewBox="0,0,350,350" style="font: 10px sans-serif; width: 70%; height: 70%;">
-                            <g id="path"><g>
-                            <g id="label"></g>
-                        </svg>
-                    </div>
                     
                     <div id="agent_body">
                         <div id="terminal-frame">
