@@ -455,9 +455,9 @@ function updateTerminal() {
 	});
 }
 
-async function renderCharts() {
-	// "/v"+API_VERSION+"/"+res+"/"+resId
+let agentIdToState = new Map();
 
+async function renderCharts() {
 	let response = await fetch(`/v${API_VERSION}/agents/`);
 	let json = await response.json();
 	if (!("results" in json)) {
@@ -474,6 +474,13 @@ async function renderCharts() {
 
 	// Get list of agent ids from server
 	let agentIds = response["uuids"];
+	
+	for (const uuid of agentIdToState.keys()) {
+		if (agentIds.indexOf(uuid) === -1) {
+			// if uuid is not in the response, remove it from the map
+			agentIdToState.delete(uuid);
+		}
+	}
 
 	// status array
 	let status_array = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
@@ -491,6 +498,7 @@ async function renderCharts() {
 				let ss = resJson['results']['operational_state'];
 				let uuid = resJson['results']['id'];
 				status_array[ss]++;
+				agentIdToState.set(uuid, resJson['results']);
 			});
 		})
 		.then(() => {
