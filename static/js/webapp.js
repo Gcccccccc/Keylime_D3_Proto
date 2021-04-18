@@ -523,28 +523,37 @@ function drawChart(chart, statusArray) {
 	]);
 
 	let options = {
-		title: 'Agents Status Pie Chart',
-		pieHole: 0.4,
-		titleTextStyle: {
-		fontSize: 25
+			title: 'Agents Status Pie Chart',
+			pieHole: 0.4,
+			titleTextStyle: {
+			fontSize: 25
 		},
 		colors:['#BEBEBE', '#FFFF00', 'black', '#88FF99', 'black', 'black', 'black', 'black', 'black', '#FF6666', 'black'],
 		pieSliceTextStyle: {fontSize: 18},
 		legend: {
-		textStyle: {
-			fontSize: 20
-		}
+			textStyle: {
+				fontSize: 20
+			}
 		}
 	};
 
 	chart.draw(data, options);
 }
 
-function selectHandler(chart) {
+function selectHandler(chart, agentIdToState) {
 	let selectedItem = chart.getSelection()[0];
 	if (selectedItem) {
 		alert('The user selected');
 		console.log(STR_MAPPINGS[selectedItem.row]);
+
+		let agentList = [];
+		for (const agentDetail of agentIdToState.values()) {
+			if (agentDetail.operational_state === selectedItem.row) {
+				agentList.push(agentDetail);
+			}
+		}
+
+		console.log(agentList);
 	}
 }
 
@@ -559,7 +568,7 @@ window.onload = function(e) {
 
 	let agentIdToState = new Map();
 	let chart = new google.visualization.PieChart(document.getElementById('donutchart'));
-	google.visualization.events.addListener(chart, 'select', () => { selectHandler(chart); });
+	google.visualization.events.addListener(chart, 'select', () => { selectHandler(chart, agentIdToState); });
 	google.charts.setOnLoadCallback(() => { drawChart(chart, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]); });
 	
 	// Populate agents on the page (and turn on auto-updates)
