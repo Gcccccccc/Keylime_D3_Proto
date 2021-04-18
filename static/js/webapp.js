@@ -8,6 +8,7 @@ let API_VERSION=2;
 let MAX_TERM_LEN=100;
 let DEBUG=false;
 let gTerminalOffset=0;
+google.charts.load("current", {packages:["corechart"]});
 
 
 // Report that error occurred
@@ -455,9 +456,7 @@ function updateTerminal() {
 	});
 }
 
-let agentIdToState = new Map();
-
-async function renderCharts() {
+async function renderCharts(chart, agentIdToState) {
 	let response = await fetch(`/v${API_VERSION}/agents/`);
 	let json = await response.json();
 	if (!("results" in json)) {
@@ -483,7 +482,7 @@ async function renderCharts() {
 	}
 
 	// status array
-	let status_array = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+	let statusArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
 	// collect visualization data for pie chart and sunburst chart
 	let urls = [];
@@ -497,59 +496,55 @@ async function renderCharts() {
 			dataItems.forEach((resJson) => {
 				let ss = resJson['results']['operational_state'];
 				let uuid = resJson['results']['id'];
-				status_array[ss]++;
+				statusArray[ss]++;
 				agentIdToState.set(uuid, resJson['results']);
 			});
+			console.log(agentIdToState);
 		})
 		.then(() => {
-			drawChart();
+			drawChart(chart, statusArray);
 		});
-	
+}
 
+function drawChart(chart, statusArray) {
+	let data = google.visualization.arrayToDataTable([
+		['Status', 'status'],
+		['Registered', statusArray[0]],
+		['Start', statusArray[1]],
+		['Saved', statusArray[2]],
+		['Get Quote', statusArray[3]],
+		['Get Quote (retry)', statusArray[4]],
+		['Provide V', statusArray[5]],
+		['Provide V (retry)', statusArray[6]],
+		['Failed', statusArray[7]],
+		['Terminated', statusArray[8]],
+		['Invalid Quote', statusArray[9]],
+		['Tenant Quote Failed', statusArray[10]]
+	]);
 
-	google.charts.load("current", {packages:["corechart"]});
-	google.charts.setOnLoadCallback(drawChart);
-	function drawChart() {
-		let data = google.visualization.arrayToDataTable([
-			['Status', 'status'],
-			['Registered', status_array[0]],
-			['Start', status_array[1]],
-			['Saved', status_array[2]],
-			['Get Quote', status_array[3]],
-			['Get Quote (retry)', status_array[4]],
-			['Provide V', status_array[5]],
-			['Provide V (retry)', status_array[6]],
-			['Failed', status_array[7]],
-			['Terminated', status_array[8]],
-			['Invalid Quote', status_array[9]],
-			['Tenant Quote Failed', status_array[10]]
-		]);
-
-		let options = {
-			title: 'Agents Status Pie Chart',
-			pieHole: 0.4,
-			titleTextStyle: {
-			fontSize: 25
-			},
-			colors:['#BEBEBE', '#FFFF00', 'black', '#88FF99', 'black', 'black', 'black', 'black', 'black', '#FF6666', 'black'],
-			pieSliceTextStyle: {fontSize: 18},
-			legend: {
-			textStyle: {
-				fontSize: 20
-			}
-			}
-		};
-		let chart = new google.visualization.PieChart(document.getElementById('donutchart'));
-		function selectHandler() {
-			let selectedItem = chart.getSelection()[0];
-			if (selectedItem) {
-				let topping = data.getValue(selectedItem.row, 0);
-				alert('The user selected ' + topping);
-			}
+	let options = {
+		title: 'Agents Status Pie Chart',
+		pieHole: 0.4,
+		titleTextStyle: {
+		fontSize: 25
+		},
+		colors:['#BEBEBE', '#FFFF00', 'black', '#88FF99', 'black', 'black', 'black', 'black', 'black', '#FF6666', 'black'],
+		pieSliceTextStyle: {fontSize: 18},
+		legend: {
+		textStyle: {
+			fontSize: 20
 		}
+		}
+	};
 
-		google.visualization.events.addListener(chart, 'select', selectHandler);
-		chart.draw(data, options);
+	chart.draw(data, options);
+}
+
+function selectHandler(chart) {
+	let selectedItem = chart.getSelection()[0];
+	if (selectedItem) {
+		alert('The user selected');
+		console.log(STR_MAPPINGS[selectedItem.row]);
 	}
 }
 
@@ -562,9 +557,16 @@ window.onload = function(e) {
 		droppable[i].addEventListener('drop', fileUploadCallback, false);
 	}
 
+	let agentIdToState = new Map();
+	let chart = new google.visualization.PieChart(document.getElementById('donutchart'));
+	google.visualization.events.addListener(chart, 'select', () => { selectHandler(chart); });
+	google.charts.setOnLoadCallback(() => { drawChart(chart, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]); });
+	
 	// Populate agents on the page (and turn on auto-updates)
-	renderCharts();
-	setInterval(renderCharts, 20000);
+	renderCharts(chart, agentIdToState);
+	setInterval(() => {
+		renderCharts(chart, agentIdToState);
+	}, 20000);
 	/*
 	populateAgents();
 	setInterval(populateAgents, 2000);
