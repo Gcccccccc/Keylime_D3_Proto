@@ -543,8 +543,6 @@ function drawChart(chart, statusArray) {
 function selectHandler(chart, agentIdToState) {
 	let selectedItem = chart.getSelection()[0];
 	if (selectedItem) {
-		alert('The user selected');
-		console.log(STR_MAPPINGS[selectedItem.row]);
 
 		let agentList = [];
 		for (const agentDetail of agentIdToState.values()) {
@@ -553,7 +551,6 @@ function selectHandler(chart, agentIdToState) {
 			}
 		}
 
-		console.log(agentList);
 		renderAgentList(agentList);
 	}
 }
@@ -655,6 +652,7 @@ window.onload = function(e) {
 	setInterval(() => {
 		renderCharts(chart, agentIdToState);
 	}, 20000);
+	setInterval(updateTerminal, 10000);
 	/*
 	populateAgents();
 	setInterval(populateAgents, 2000);
