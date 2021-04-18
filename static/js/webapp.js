@@ -554,6 +554,85 @@ function selectHandler(chart, agentIdToState) {
 		}
 
 		console.log(agentList);
+		renderAgentList(agentList);
+	}
+}
+
+function insertAgent(agent) {
+	let ele = document.getElementById('agent_template').firstElementChild.cloneNode(true);
+	ele.style.display = "block";
+	ele.id = agent.id;
+	ele.firstElementChild.id = agent.id + "-over";
+	ele.lastElementChild.id = agent.id + "-det";
+
+	// Format address to display
+	let fulladdr = "<i>N/A</i>";
+	if ("ip" in agent && "port" in agent) {
+		let ipaddr = agent.ip;
+		let port = agent.port;
+		fulladdr = ipaddr + ":" + port;
+	}
+
+	// Format status to display
+	let state = agent.operational_state;
+	let statStr = "<i>N/A</i>";
+	if ("operational_state" in agent) {
+		statStr = agent.operational_state;
+		let readable = STR_MAPPINGS[statStr];
+		statStr = statStr + " (" + readable + ")";
+	}
+
+	let agentIdShort = agent.id.substr(0,8);
+	let classSuffix = style_mappings[state]["class"];
+	let action = style_mappings[state]["action"];
+
+	let agentOverviewInsert = ""
+			+ "<div onmousedown=\"asyncRequest('" + action + "','agents','" + agent.id + "')\" class='tbl_ctrl_" + classSuffix + "'>&nbsp;</div>"
+			+ "<div onmousedown=\"toggleVisibility('" + agent.id + "-det')\" style='display:block;float:left;'>"
+			+ "<div class='tbl_col_" + classSuffix + "' title='" + agent.id + "'>" + agentIdShort + "&hellip;</div>"
+			+ "<div class='tbl_col_" + classSuffix + "'>" + fulladdr + "</div>"
+			+ "<div class='tbl_col_" + classSuffix + "'>" + statStr + "</div>"
+			+ "<br style='clear:both;'>"
+			+ "</div>"
+			+ "<br style='clear:both;'>"
+
+	let agentDetailsInsert = "<div class='tbl_det_" + classSuffix + "'><b><i>Details:</i></b><br><pre>";
+
+	// Parse out detailed specs for agent
+	for (let stat in agent) {
+		statStr = agent[stat];
+
+		// Make operational state code more human-readable
+		if (stat == "operational_state") {
+			let readable = STR_MAPPINGS[statStr];
+			statStr = statStr + " (" + readable + ")";
+		}
+		else if (typeof(statStr) === "object") {
+			statStr = JSON.stringify(statStr, null, 2);
+		}
+
+		agentDetailsInsert += stat + ": " + statStr + "<br>";
+	}
+	agentDetailsInsert += "</pre></div>";
+
+	// Update agent on GUI
+	ele.firstElementChild.innerHTML = agentOverviewInsert;
+	ele.lastElementChild.innerHTML = agentDetailsInsert;
+
+	document.getElementById("agent_container").appendChild(ele);
+}
+
+function renderAgentList(agents) {
+	// remove existing agents in the list
+	let agentContainer = document.getElementById("agent_container");
+
+	while (agentContainer.firstChild) {
+		agentContainer.removeChild(agentContainer.firstChild);
+	}
+	
+	// add agents
+	for (const agent of agents) {
+		insertAgent(agent);
 	}
 }
 
