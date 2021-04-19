@@ -297,6 +297,9 @@ class WebAppHandler(BaseHandler):
                             <div class='table_col'>status</div>
                             <br style='clear:both;' />
                         </div>
+                        <button id='prev_page' disabled=true>Prev</button>
+                        <button id='next_page' disabled=true>Next</button>
+                        <button id='clear_page'>Clear</button>
                         <div id='agent_template' style='display:none;'>
                             <li class='agent'>
                                 <div style='display:block;cursor:help;width:800px;'></div>

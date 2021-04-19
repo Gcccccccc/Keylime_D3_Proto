@@ -8,6 +8,9 @@ let API_VERSION=2;
 let MAX_TERM_LEN=100;
 let DEBUG=false;
 let gTerminalOffset=0;
+let PAGE_SIZE=10;
+let page=0;
+let selectedAgents=[];
 google.charts.load("current", {packages:["corechart"]});
 
 
@@ -543,15 +546,28 @@ function drawChart(chart, statusArray) {
 function selectHandler(chart, agentIdToState) {
 	let selectedItem = chart.getSelection()[0];
 	if (selectedItem) {
-
-		let agentList = [];
+		selectedAgents = [];
+		page = 0;
 		for (const agentDetail of agentIdToState.values()) {
 			if (agentDetail.operational_state === selectedItem.row) {
-				agentList.push(agentDetail);
+				selectedAgents.push(agentDetail);
 			}
 		}
+		renderAgentList();
+	}
+}
 
-		renderAgentList(agentList);
+function nextPageHandler() {
+	if ((page + 1) * PAGE_SIZE < selectedAgents.length) {
+		page += 1;
+		renderAgentList(page);
+	}
+}
+
+function prevPageHandler() {
+	if ((page - 1) >= 0) {
+		page -= 1;
+		renderAgentList(page);
 	}
 }
 
@@ -619,18 +635,27 @@ function insertAgent(agent) {
 	document.getElementById("agent_container").appendChild(ele);
 }
 
-function renderAgentList(agents) {
+function clearAgentList() {
 	// remove existing agents in the list
 	let agentContainer = document.getElementById("agent_container");
 
 	while (agentContainer.firstChild) {
 		agentContainer.removeChild(agentContainer.firstChild);
 	}
-	
+
+	document.getElementById("prev_page").disabled = true;
+	document.getElementById("next_page").disabled = true;
+}
+
+function renderAgentList(page_num=0) {
+	clearAgentList();
 	// add agents
-	for (const agent of agents) {
+	for (const agent of selectedAgents.slice(page_num * PAGE_SIZE, (page_num + 1) * PAGE_SIZE)) {
 		insertAgent(agent);
 	}
+
+	document.getElementById("prev_page").disabled = false;
+	document.getElementById("next_page").disabled = false;
 }
 
 // Attach dragging capabilities for payload upload functionality
@@ -647,6 +672,10 @@ window.onload = function(e) {
 	google.visualization.events.addListener(chart, 'select', () => { selectHandler(chart, agentIdToState); });
 	google.charts.setOnLoadCallback(() => { drawChart(chart, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]); });
 	
+	document.getElementById("clear_page").addEventListener("click", clearAgentList);
+	document.getElementById("next_page").addEventListener("click", nextPageHandler);
+	document.getElementById("prev_page").addEventListener("click", prevPageHandler);
+
 	// Populate agents on the page (and turn on auto-updates)
 	renderCharts(chart, agentIdToState);
 	setInterval(() => {
