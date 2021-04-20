@@ -66,9 +66,12 @@ html, body {background-color:#EEEEEE;margin:0px;padding:0px;height:100%;width:10
 	margin-left: 25px;
 }
 
-#sunburst div {
-  display: inline-block;
-  background: #4285F4;
-  width: 20px;
-  margin-right: 3px;
+.agent_body_container {
+  display: flex;
 }
+.agent_body_item {
+  flex: 1 1 0;
+  width: 0;
+}
+
+
