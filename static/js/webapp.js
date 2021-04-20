@@ -8,6 +8,10 @@ let API_VERSION=2;
 let MAX_TERM_LEN=100;
 let DEBUG=false;
 let gTerminalOffset=0;
+let PAGE_SIZE=10;
+let page=0;
+let selectedAgents=[];
+google.charts.load("current", {packages:["corechart"]});
 
 
 // Report that error occurred
@@ -455,149 +459,7 @@ function updateTerminal() {
 	});
 }
 
-function renderSunburst(data) {
-	// render sunburst chart
-	let width = 350
-	let radius = width / 6
-	let arc = d3.arc()
-		.startAngle(d => d.x0)
-		.endAngle(d => d.x1)
-		.padAngle(d => Math.min((d.x1 - d.x0) / 2, 0.005))
-		.padRadius(radius * 1.5)
-		.innerRadius(d => d.y0 * radius)
-		.outerRadius(d => Math.max(d.y0 * radius, d.y1 * radius - 1))
-	let format = d3.format(",d")
-
-	// colorArray = d3.interpolate("rgb(144, 238, 144)", "rgb(255, 107, 107)", "rgb(211, 211, 211)")
-	// console.log(colorArray)
-	// color = d3.scaleOrdinal(d3.quantize(colorArray, 3))
-	// console.log(color)
-
-	let color = (d) => {
-		while (d.depth > 1)
-			d = d.parent;
-		if (d.data.name == "Registered") {
-			return "rgb(111, 111, 111)";
-		} else if (d.data.name == "Get Quote") {
-			return "rgb(29, 176, 0)";
-		} else if (d.data.name == "Invalid Quote") {
-			return "rgb(219, 2, 2)";
-		} else if (d.data.name == "Start") {
-			return "rgb(255, 255, 0)";
-		} else {
-			return "black";
-		}
-		}
-	let partition = data => {
-		const root = d3.hierarchy(data)
-			.sum(d => d.value)
-			.sort((a, b) => b.value - a.value);
-		return d3.partition()
-			.size([2 * Math.PI, root.height + 1])
-				(root);
-	}	
-
-	const root = partition(data);
-	root.each(d => d.current = d);
-
-	
-	// create an svg
-	const svg = d3.select("#sunburst svg")
-			.attr("viewBox", [0, 0, width, width])
-		.style("font", "10px sans-serif")
-		.style("width", "35%")
-		.style("height", "35%");
-
-
-	const g = d3.select("#sunburst svg g")
-		.attr("transform", `translate(${width / 2},${width / 2})`);
-
-	const path = d3.select("#path")
-		.selectAll("path")
-		.data(root.descendants().slice(1))
-		.join("path")
-			.attr("fill", d => { return color(d); })
-			.attr("fill-opacity", d => arcVisible(d.current) ? (d.children ? 0.6 : 0.4) : 0)
-			.attr("d", d => arc(d.current));
-
-	path.transition().duration(750);
-	path.filter(d => d.children)
-		.style("cursor", "pointer")
-		.on("click", clicked);
-
-	path.append("title")
-		.text(d =>{ return `${d.ancestors().map(d => d.data.name).reverse().join("/")}\n${(("children" in d) ? d.children.length: d['data']['id'])}`;});
-
-	const label = d3.select("#label")
-		.attr("pointer-events", "none")
-		.attr("text-anchor", "middle")
-		.style("user-select", "none")
-		.selectAll("text")
-		.data(root.descendants().slice(1))
-		.join("text")
-		.attr("dy", "0.35em")
-		.attr("fill-opacity", d => +labelVisible(d.current))
-		.attr("transform", d => labelTransform(d.current))
-		.text(d => d.data.name);
-
-	const parent = g.append("circle")
-		.datum(root)
-		.attr("r", radius)
-		.attr("fill", "none")
-		.attr("pointer-events", "all")
-		.on("click", clicked);
-
-	function clicked(event, p) {
-		parent.datum(p.parent || root);
-
-		root.each(d => d.target = {
-			x0: Math.max(0, Math.min(1, (d.x0 - p.x0) / (p.x1 - p.x0))) * 2 * Math.PI,
-			x1: Math.max(0, Math.min(1, (d.x1 - p.x0) / (p.x1 - p.x0))) * 2 * Math.PI,
-			y0: Math.max(0, d.y0 - p.depth),
-			y1: Math.max(0, d.y1 - p.depth)
-		});
-
-		const t = g.transition().duration(750);
-
-		// Transition the data on all arcs, even the ones that aren’t visible,
-		// so that if this transition is interrupted, entering arcs will start
-		// the next transition from the desired position.
-		path.transition(t)
-			.tween("data", d => {
-					const i = d3.interpolate(d.current, d.target);
-					return t => d.current = i(t);
-			})
-				.filter(function(d) {
-				return +this.getAttribute("fill-opacity") || arcVisible(d.target);
-				})
-			.attr("fill-opacity", d => arcVisible(d.target) ? (d.children ? 0.6 : 0.4) : 0)
-			.attrTween("d", d => () => arc(d.current));
-
-		label.filter(function(d) {
-			return +this.getAttribute("fill-opacity") || labelVisible(d.target);
-			}).transition(t)
-			.attr("fill-opacity", d => +labelVisible(d.target))
-			.attrTween("transform", d => () => labelTransform(d.current));
-		}
-
-	function arcVisible(d) {
-		return d.y1 <= 3 && d.y0 >= 1 && d.x1 > d.x0;
-	}
-
-	function labelVisible(d) {
-		return d.y1 <= 3 && d.y0 >= 1 && (d.y1 - d.y0) * (d.x1 - d.x0) > 0.03;
-	}
-
-	function labelTransform(d) {
-		const x = (d.x0 + d.x1) / 2 * 180 / Math.PI;
-		const y = (d.y0 + d.y1) / 2 * radius;
-		return `rotate(${x - 90}) translate(${y},0) rotate(${x < 180 ? 0 : 180})`;
-	}
-}
-
-async function renderCharts() {
-	// "/v"+API_VERSION+"/"+res+"/"+resId
-
+async function renderCharts(chart, agentIdToState) {
 	let response = await fetch(`/v${API_VERSION}/agents/`);
 	let json = await response.json();
 	if (!("results" in json)) {
@@ -614,23 +476,16 @@ async function renderCharts() {
 
 	// Get list of agent ids from server
 	let agentIds = response["uuids"];
-
-	console.log(agentIds);
+	
+	for (const uuid of agentIdToState.keys()) {
+		if (agentIds.indexOf(uuid) === -1) {
+			// if uuid is not in the response, remove it from the map
+			agentIdToState.delete(uuid);
+		}
+	}
 
 	// status array
-	let status_array = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-	// sunburst chart data
-	let data = {
-		"name": "agents sunburst chart",
-		"children": []
-	}
-	// initialize status_array
-	for (let i = 0; i <= 10; i++) {
-		data['children'].push({
-			"name": STR_MAPPINGS[i],
-			"children": []
-		})
-	}
+	let statusArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
 	// collect visualization data for pie chart and sunburst chart
 	let urls = [];
@@ -644,64 +499,163 @@ async function renderCharts() {
 			dataItems.forEach((resJson) => {
 				let ss = resJson['results']['operational_state'];
 				let uuid = resJson['results']['id'];
-				status_array[ss]++;
-				data['children'][ss]['children'].push({
-					id: uuid,
-					value: 100,
-				});
+				statusArray[ss]++;
+				agentIdToState.set(uuid, resJson['results']);
 			});
+			console.log(agentIdToState);
 		})
 		.then(() => {
-			renderSunburst(data);
-			drawChart();
+			drawChart(chart, statusArray);
 		});
-	
+}
 
+function drawChart(chart, statusArray) {
+	let data = google.visualization.arrayToDataTable([
+		['Status', 'status'],
+		['Registered', statusArray[0]],
+		['Start', statusArray[1]],
+		['Saved', statusArray[2]],
+		['Get Quote', statusArray[3]],
+		['Get Quote (retry)', statusArray[4]],
+		['Provide V', statusArray[5]],
+		['Provide V (retry)', statusArray[6]],
+		['Failed', statusArray[7]],
+		['Terminated', statusArray[8]],
+		['Invalid Quote', statusArray[9]],
+		['Tenant Quote Failed', statusArray[10]]
+	]);
 
-	google.charts.load("current", {packages:["corechart"]});
-	google.charts.setOnLoadCallback(drawChart);
-	function drawChart() {
-		var data = google.visualization.arrayToDataTable([
-			['Status', 'status'],
-			['Registered', status_array[0]],
-			['Start', status_array[1]],
-			['Saved', status_array[2]],
-			['Get Quote', status_array[3]],
-			['Get Quote (retry)', status_array[4]],
-			['Provide V', status_array[5]],
-			['Provide V (retry)', status_array[6]],
-			['Failed', status_array[7]],
-			['Terminated', status_array[8]],
-			['Invalid Quote', status_array[9]],
-			['Tenant Quote Failed', status_array[10]]
-		]);
-
-		var options = {
+	let options = {
 			title: 'Agents Status Pie Chart',
 			pieHole: 0.4,
 			titleTextStyle: {
 			fontSize: 25
-			},
-			colors:['#BEBEBE', '#FFFF00', 'black', '#88FF99', 'black', 'black', 'black', 'black', 'black', '#FF6666', 'black'],
-			pieSliceTextStyle: {fontSize: 18},
-			legend: {
+		},
+		colors:['#BEBEBE', '#FFFF00', 'black', '#88FF99', 'black', 'black', 'black', 'black', 'black', '#FF6666', 'black'],
+		pieSliceTextStyle: {fontSize: 18},
+		legend: {
 			textStyle: {
 				fontSize: 20
 			}
-			}
-		};
-		var chart = new google.visualization.PieChart(document.getElementById('donutchart'));
-		function selectHandler() {
-			var selectedItem = chart.getSelection()[0];
-			if (selectedItem) {
-			var topping = data.getValue(selectedItem.row, 0);
-			alert('The user selected ' + topping);
+		}
+	};
+
+	chart.draw(data, options);
+}
+
+function selectHandler(chart, agentIdToState) {
+	let selectedItem = chart.getSelection()[0];
+	if (selectedItem) {
+		selectedAgents = [];
+		page = 0;
+		for (const agentDetail of agentIdToState.values()) {
+			if (agentDetail.operational_state === selectedItem.row) {
+				selectedAgents.push(agentDetail);
 			}
 		}
-
-		google.visualization.events.addListener(chart, 'select', selectHandler);
-		chart.draw(data, options);
+		renderAgentList();
 	}
+}
+
+function nextPageHandler() {
+	if ((page + 1) * PAGE_SIZE < selectedAgents.length) {
+		page += 1;
+		renderAgentList(page);
+	}
+}
+
+function prevPageHandler() {
+	if ((page - 1) >= 0) {
+		page -= 1;
+		renderAgentList(page);
+	}
+}
+
+function insertAgent(agent) {
+	let ele = document.getElementById('agent_template').firstElementChild.cloneNode(true);
+	ele.style.display = "block";
+	ele.id = agent.id;
+	ele.firstElementChild.id = agent.id + "-over";
+	ele.lastElementChild.id = agent.id + "-det";
+
+	// Format address to display
+	let fulladdr = "<i>N/A</i>";
+	if ("ip" in agent && "port" in agent) {
+		let ipaddr = agent.ip;
+		let port = agent.port;
+		fulladdr = ipaddr + ":" + port;
+	}
+
+	// Format status to display
+	let state = agent.operational_state;
+	let statStr = "<i>N/A</i>";
+	if ("operational_state" in agent) {
+		statStr = agent.operational_state;
+		let readable = STR_MAPPINGS[statStr];
+		statStr = statStr + " (" + readable + ")";
+	}
+
+	let agentIdShort = agent.id.substr(0,8);
+	let classSuffix = style_mappings[state]["class"];
+	let action = style_mappings[state]["action"];
+
+	let agentOverviewInsert = ""
+			+ "<div onmousedown=\"asyncRequest('" + action + "','agents','" + agent.id + "')\" class='tbl_ctrl_" + classSuffix + "'>&nbsp;</div>"
+			+ "<div onmousedown=\"toggleVisibility('" + agent.id + "-det')\" style='display:block;float:left;'>"
+			+ "<div class='tbl_col_" + classSuffix + "' title='" + agent.id + "'>" + agentIdShort + "&hellip;</div>"
+			+ "<div class='tbl_col_" + classSuffix + "'>" + fulladdr + "</div>"
+			+ "<div class='tbl_col_" + classSuffix + "'>" + statStr + "</div>"
+			+ "<br style='clear:both;'>"
+			+ "</div>"
+			+ "<br style='clear:both;'>"
+
+	let agentDetailsInsert = "<div class='tbl_det_" + classSuffix + "'><b><i>Details:</i></b><br><pre>";
+
+	// Parse out detailed specs for agent
+	for (let stat in agent) {
+		statStr = agent[stat];
+
+		// Make operational state code more human-readable
+		if (stat == "operational_state") {
+			let readable = STR_MAPPINGS[statStr];
+			statStr = statStr + " (" + readable + ")";
+		}
+		else if (typeof(statStr) === "object") {
+			statStr = JSON.stringify(statStr, null, 2);
+		}
+
+		agentDetailsInsert += stat + ": " + statStr + "<br>";
+	}
+	agentDetailsInsert += "</pre></div>";
+
+	// Update agent on GUI
+	ele.firstElementChild.innerHTML = agentOverviewInsert;
+	ele.lastElementChild.innerHTML = agentDetailsInsert;
+
+	document.getElementById("agent_container").appendChild(ele);
+}
+
+function clearAgentList() {
+	// remove existing agents in the list
+	let agentContainer = document.getElementById("agent_container");
+
+	while (agentContainer.firstChild) {
+		agentContainer.removeChild(agentContainer.firstChild);
+	}
+
+	document.getElementById("prev_page").disabled = true;
+	document.getElementById("next_page").disabled = true;
+}
+
+function renderAgentList(page_num=0) {
+	clearAgentList();
+	// add agents
+	for (const agent of selectedAgents.slice(page_num * PAGE_SIZE, (page_num + 1) * PAGE_SIZE)) {
+		insertAgent(agent);
+	}
+
+	document.getElementById("prev_page").disabled = false;
+	document.getElementById("next_page").disabled = false;
 }
 
 // Attach dragging capabilities for payload upload functionality
@@ -713,9 +667,21 @@ window.onload = function(e) {
 		droppable[i].addEventListener('drop', fileUploadCallback, false);
 	}
 
+	let agentIdToState = new Map();
+	let chart = new google.visualization.PieChart(document.getElementById('donutchart'));
+	google.visualization.events.addListener(chart, 'select', () => { selectHandler(chart, agentIdToState); });
+	google.charts.setOnLoadCallback(() => { drawChart(chart, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]); });
+	
+	document.getElementById("clear_page").addEventListener("click", clearAgentList);
+	document.getElementById("next_page").addEventListener("click", nextPageHandler);
+	document.getElementById("prev_page").addEventListener("click", prevPageHandler);
+
 	// Populate agents on the page (and turn on auto-updates)
-	renderCharts();
-	setInterval(renderCharts, 20000);
+	renderCharts(chart, agentIdToState);
+	setInterval(() => {
+		renderCharts(chart, agentIdToState);
+	}, 20000);
+	setInterval(updateTerminal, 10000);
 	/*
 	populateAgents();
 	setInterval(populateAgents, 2000);

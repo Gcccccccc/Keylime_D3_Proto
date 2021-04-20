@@ -110,6 +110,14 @@ class WebAppHandler(BaseHandler):
         vtpm_policy = json.dumps(json.loads(
             config.get('tenant', 'vtpm_policy')), indent=2)
 
+        # Get default intervals for populating angents, updating agents and updating terminal
+        populate_agents_interval = json.dumps(json.loads(
+            config.get('webapp', 'populate_agents_interval')), indent=2)
+        update_agents_interval = json.dumps(json.loads(
+            config.get('webapp', 'update_agents_interval')), indent=2)
+        update_terminal_interval = json.dumps(json.loads(
+            config.get('webapp', 'update_terminal_interval')), indent=2)
+
         self.set_status(200)
         self.set_header('Content-Type', 'text/html')
         self.write(
@@ -119,17 +127,27 @@ class WebAppHandler(BaseHandler):
                 <head>
                     <meta charset='UTF-8'>
                     <title>Advanced Tenant Management System</title>
-                    <script src="https://d3js.org/d3.v6.js"></script> 
-                    <script src="https://code.jquery.com/jquery-3.5.0.js"></script>      
+                    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
                     <script type='text/javascript' src='/static/js/webapp.js'></script>
+                    <script type='text/javascript'>
+                        window.onload = function(e) {{
+                            let droppable = document.getElementsByClassName("file_drop");
+                            for (let i = 0; i < droppable.length; i++) {{
+                                droppable[i].addEventListener('dragover', dragoverCallback, false);
+                                droppable[i].addEventListener('drop', fileUploadCallback, false);
+                            }}
+                            populateAgents();
+                            setInterval(populateAgents, {0});
+                            setInterval(updateAgentsInfo, {1});
+                            setInterval(updateTerminal, {2});
+                        }}
+                    </script>
                     <link href='/static/css/webapp.css' rel='stylesheet' type='text/css'/>
-                  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
-                 
                 </head>
                 <body>
-                    <div id='modal_box' onclick="if (event.target == this) {toggleVisibility(this.id);resetAddAgentForm();return false;}">
+                    <div id='modal_box' onclick="if (event.target == this) {{toggleVisibility(this.id);resetAddAgentForm();return false;}}">
 
-            """
+            """.format(populate_agents_interval, update_agents_interval, update_terminal_interval)
         )
 
         self.write(
@@ -270,15 +288,34 @@ class WebAppHandler(BaseHandler):
                     </div>
 
                     <div class="chart" id="donutchart" style="width: 50%; height: 500px; float:left"></div>
-                    
+
                     <div id="agent_body">
+                        <h2>Agents</h2>
+                        <div class='table_header'>
+                            <div class='table_control'>&nbsp;</div>
+                            <div class='table_col'>UUID</div>
+                            <div class='table_col'>address</div>
+                            <div class='table_col'>status</div>
+                            <br style='clear:both;' />
+                        </div>
+                        <button id='prev_page' disabled=true>Prev</button>
+                        <button id='next_page' disabled=true>Next</button>
+                        <button id='clear_page'>Clear</button>
+                        <div id='agent_template' style='display:none;'>
+                            <li class='agent'>
+                                <div style='display:block;cursor:help;width:800px;'></div>
+                                <div style='display:none;'></div>
+                            </li>
+                        </div>
+                        <ol id='agent_container'></ol>
+                        <div style="color:#888;margin-left:15px;padding:10px;">
+                            <i>End of results</i>
+                        </div>
                         <div id="terminal-frame">
                             <div id="terminal-header" onmousedown="toggleVisibility('terminal')">Tenant Logs</div>
                             <div id="terminal"></div>
                         </div>
                     </div>
-                          
-
                 </body>
             </html>
             """
@@ -303,26 +340,24 @@ class AgentsHandler(BaseHandler):
             )
 
         except Exception as e:
-            logger.error("Status command response: %s:%s Unexpected response from Cloud Verifier." % (
-                tenant_templ.cloudverifier_ip, tenant_templ.cloudverifier_port))
+            logger.error("Status command response: %s:%s Unexpected response from Cloud Verifier.",
+                tenant_templ.cloudverifier_ip, tenant_templ.cloudverifier_port)
             logger.exception(e)
             config.echo_json_response(
                 self, 500, "Unexpected response from Cloud Verifier", str(e))
-            logger.error("Unexpected response from Cloud Verifier: %s" % str(e))
+            logger.error("Unexpected response from Cloud Verifier: %s", e)
             return
 
         inst_response_body = response.json()
 
         if response.status_code != 200 and response.status_code != 404:
-            logger.error(
-                "Status command response: %d Unexpected response from Cloud Verifier." % response.status_code)
+            logger.error("Status command response: %d Unexpected response from Cloud Verifier.", response.status_code)
             keylime_logging.log_http_response(
                 logger, logging.ERROR, inst_response_body)
             return None
 
         if "results" not in inst_response_body:
-            logger.critical("Error: unexpected http response body from Cloud Verifier: %s" % str(
-                response.status_code))
+            logger.critical("Error: unexpected http response body from Cloud Verifier: %s", response.status_code)
             return None
 
         # Agent not added to CV (but still registered)
@@ -357,8 +392,7 @@ class AgentsHandler(BaseHandler):
         if "agents" not in rest_params:
             # otherwise they must be looking for agent info
             config.echo_json_response(self, 400, "uri not supported")
-            logger.warning(
-                'GET returning 400 response. uri not supported: ' + self.request.path)
+            logger.warning('GET returning 400 response. uri not supported: %s', self.request.path)
             return
 
         agent_id = rest_params["agents"]
@@ -380,8 +414,8 @@ class AgentsHandler(BaseHandler):
             )
 
         except Exception as e:
-            logger.error("Status command response: %s:%s Unexpected response from Registrar." % (
-                tenant_templ.registrar_ip, tenant_templ.registrar_port))
+            logger.error("Status command response: %s:%s Unexpected response from Registrar.",
+                tenant_templ.registrar_ip, tenant_templ.registrar_port)
             logger.exception(e)
             config.echo_json_response(
                 self, 500, "Unexpected response from Registrar", str(e))
@@ -390,15 +424,13 @@ class AgentsHandler(BaseHandler):
         response_body = response.json()
 
         if response.status_code != 200:
-            logger.error(
-                "Status command response: %d Unexpected response from Registrar." % response.status_code)
+            logger.error("Status command response: %d Unexpected response from Registrar.", response.status_code)
             keylime_logging.log_http_response(
                 logger, logging.ERROR, response_body)
             return None
 
         if ("results" not in response_body) or ("uuids" not in response_body["results"]):
-            logger.critical("Error: unexpected http response body from Registrar: %s" % str(
-                response.status_code))
+            logger.critical("Error: unexpected http response body from Registrar: %s", response.status_code)
             return None
 
         agent_list = response_body["results"]["uuids"]
@@ -445,8 +477,7 @@ class AgentsHandler(BaseHandler):
 
         if "agents" not in rest_params:
             config.echo_json_response(self, 400, "uri not supported")
-            logger.warning(
-                'DELETE returning 400 response. uri not supported: ' + self.request.path)
+            logger.warning('DELETE returning 400 response. uri not supported: %s', self.request.path)
             return
 
         agent_id = rest_params["agents"]
@@ -473,8 +504,7 @@ class AgentsHandler(BaseHandler):
 
         if "agents" not in rest_params:
             config.echo_json_response(self, 400, "uri not supported")
-            logger.warning(
-                'POST returning 400 response. uri not supported: ' + self.request.path)
+            logger.warning('POST returning 400 response. uri not supported: %s', self.request.path)
             return
 
         agent_id = rest_params["agents"]
@@ -565,8 +595,7 @@ class AgentsHandler(BaseHandler):
             mytenant.do_quote()
         except Exception as e:
             logger.exception(e)
-            logger.warning(
-                'POST returning 500 response. Tenant error: %s' % str(e))
+            logger.warning('POST returning 500 response. Tenant error: %s', e)
             config.echo_json_response(self, 500, "Request failure", str(e))
             return
 
@@ -586,8 +615,7 @@ class AgentsHandler(BaseHandler):
 
         if "agents" not in rest_params:
             config.echo_json_response(self, 400, "uri not supported")
-            logger.warning(
-                'PUT returning 400 response. uri not supported: ' + self.request.path)
+            logger.warning('PUT returning 400 response. uri not supported: %s', self.request.path)
             return
 
         agent_id = rest_params["agents"]
@@ -626,29 +654,33 @@ def parse_data_uri(data_uri):
 
 def start_tornado(tornado_server, port):
     tornado_server.listen(port)
-    logger.info("Starting Torando on port " + str(port))
+    logger.info("Starting Torando on port %s", port)
     tornado.ioloop.IOLoop.instance().start()
     logger.info("Tornado finished")
 
 
 def get_tls_context():
     ca_cert = config.get('tenant', 'ca_cert')
+    my_tenant_cert = config.get('tenant', 'my_cert')
+    my_tenant_priv_key = config.get('tenant', 'private_key')
 
     tls_dir = config.get('tenant', 'tls_dir')
 
     if tls_dir == 'default':
         ca_cert = 'cacert.crt'
+        my_tenant_cert = 'client-cert.crt'
+        my_tenant_priv_key = 'client-private.pem'
         tls_dir = 'cv_ca'
 
     # this is relative path, convert to absolute in WORK_DIR
     if tls_dir[0] != '/':
         tls_dir = os.path.abspath('%s/%s' % (config.WORK_DIR, tls_dir))
 
-    logger.info(f"Setting up client TLS in {tls_dir}")
+    logger.info("Setting up client TLS in %s", tls_dir)
 
     ca_path = "%s/%s" % (tls_dir, ca_cert)
-    my_tls_cert = "%s" % (my_cert)
-    my_tls_priv_key = "%s" % (my_priv_key)
+    my_tls_cert = "%s/%s" % (tls_dir, my_tenant_cert)
+    my_tls_priv_key = "%s/%s" % (tls_dir, my_tenant_priv_key)
 
     context = ssl.create_default_context()
     context.load_verify_locations(cafile=ca_path)
@@ -668,10 +700,9 @@ def main():
 
     if not config.REQUIRE_ROOT and webapp_port < 1024:
         webapp_port += 2000
-        logger.warning("Running without root, changing port to %d" % webapp_port)
+        logger.warning("Running without root, changing port to %d", webapp_port)
 
-    logger.info(
-        'Starting Tenant WebApp (tornado) on port %d use <Ctrl-C> to stop' % webapp_port)
+    logger.info('Starting Tenant WebApp (tornado) on port %d use <Ctrl-C> to stop', webapp_port)
 
     # Figure out where our static files are located
     if getattr(sys, 'frozen', False):
