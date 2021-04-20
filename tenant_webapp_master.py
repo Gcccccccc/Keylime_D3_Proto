@@ -288,30 +288,30 @@ class WebAppHandler(BaseHandler):
                     </div>
 
                     <div class="agent_body_container">
-                    	<div class="chart agent_body_item" id="donutchart"></div>
-                    	<div class="agent_body_item">
-                    		<h2>Agents</h2>
-	                        <div class='table_header'>
-	                            <div class='table_control'>&nbsp;</div>
-	                            <div class='table_col'>UUID</div>
-	                            <div class='table_col'>address</div>
-	                            <div class='table_col'>status</div>
-	                            <br style='clear:both;' />
-	                        </div>
-	                        <button id='prev_page' disabled=true>Prev</button>
-	                        <button id='next_page' disabled=true>Next</button>
-	                        <button id='clear_page'>Clear</button>
-	                        <div id='agent_template' style='display:none;'>
-	                            <li class='agent'>
-	                                <div style='display:block;cursor:help;width:800px;'></div>
-	                                <div style='display:none;'></div>
-	                            </li>
-	                        </div>
-	                        <ol id='agent_container'></ol>
-	                        <div style="color:#888;margin-left:15px;padding:10px;">
-	                            <i>End of results</i>
-	                        </div>
-                    	</div>
+                        <div class="chart agent_body_item" id="donutchart"></div>
+                        <div class="agent_body_item">
+                            <h2>Agents</h2>
+                            <div class='table_header'>
+                                <div class='table_control'>&nbsp;</div>
+                                <div class='table_col'>UUID</div>
+                                <div class='table_col'>address</div>
+                                <div class='table_col'>status</div>
+                                <br style='clear:both;' />
+                            </div>
+                                <div id='agent_template' style='display:none;'>
+                                <li class='agent'>
+                                    <div style='display:block;cursor:help;width:800px;'></div>
+                                    <div style='display:none;'></div>
+                                </li>
+                            </div>
+                            <ol id='agent_container'></ol>
+                            <div id="page_ctl">
+                                <button id='prev_page' disabled=true>Prev</button>
+                                <button id='next_page' disabled=true>Next</button>
+                                <button id='clear_page'>Clear</button>
+                                <span id="page_number"></span>
+                            </div>
+                        </div>
                     </div>
 
                     <div id="terminal-frame">

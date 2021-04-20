@@ -531,7 +531,7 @@ function drawChart(chart, statusArray) {
 			titleTextStyle: {
 			fontSize: 25
 		},
-		colors:['#BEBEBE', '#FFFF00', 'black', '#88FF99', 'black', 'black', 'black', 'black', 'black', '#FF6666', 'black'],
+		colors:['#BEBEBE', '#FFFF00', '#BEBEBE', '#88FF99', '#FFFF00', '#88FF99', '#FFFF00', '#FF6666', '#BEBEBE', '#FF6666', '#FF6666'],
 		pieSliceTextStyle: {fontSize: 18},
 		legend: {
 			textStyle: {
@@ -645,6 +645,7 @@ function clearAgentList() {
 
 	document.getElementById("prev_page").disabled = true;
 	document.getElementById("next_page").disabled = true;
+	document.getElementById("page_number").innerHTML = ""; 
 }
 
 function renderAgentList(page_num=0) {
@@ -656,6 +657,7 @@ function renderAgentList(page_num=0) {
 
 	document.getElementById("prev_page").disabled = false;
 	document.getElementById("next_page").disabled = false;
+	document.getElementById("page_number").innerHTML = `page: ${page + 1}/${Math.ceil(selectedAgents.length / PAGE_SIZE)}`;
 }
 
 // Attach dragging capabilities for payload upload functionality

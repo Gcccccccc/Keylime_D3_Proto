@@ -61,17 +61,21 @@ html, body {background-color:#EEEEEE;margin:0px;padding:0px;height:100%;width:10
 .tbl_det_failed {background-color:#FF6666;}
 .tbl_det_invalid {background-color:#FF6666;}
 .chart {
-	border: 2px solid lightgray;
-	margin-top: 25px;
-	margin-left: 25px;
+  margin-top: 25px;
+  margin-left: 25px;
 }
 
 .agent_body_container {
   display: flex;
+  height: 550px;
 }
 .agent_body_item {
   flex: 1 1 0;
   width: 0;
+  padding: 15px;
 }
 
+#page_ctl {
+  margin-left: 40px;
+}
 
