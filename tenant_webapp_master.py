@@ -127,6 +127,7 @@ class WebAppHandler(BaseHandler):
                 <head>
                     <meta charset='UTF-8'>
                     <title>Advanced Tenant Management System</title>
+                    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
                     <script type='text/javascript' src='/static/js/webapp.js'></script>
                     <script type='text/javascript'>
                         window.onload = function(e) {{
