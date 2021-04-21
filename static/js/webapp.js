@@ -9,8 +9,14 @@ let MAX_TERM_LEN=100;
 let DEBUG=false;
 let gTerminalOffset=0;
 let PAGE_SIZE=10;
+let BATCH_SIZE=10;
+
+// global variables
 let page=0;
 let selectedAgents=[];
+let agentIdx = 0;
+let statusArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
 google.charts.load("current", {packages:["corechart"]});
 
 
@@ -484,13 +490,15 @@ async function renderCharts(chart, agentIdToState) {
 		}
 	}
 
-	// status array
-	let statusArray = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+	// collect visualization data for pie chart
+	if (agentIdx == agentIds.length) {
+		agentIdx = 0;
+	}
 
-	// collect visualization data for pie chart and sunburst chart
 	let urls = [];
-	for (let i = 0; i < agentIds.length; i++) {
-		urls.push(`/v${API_VERSION}/agents/${agentIds[i]}`);
+	let batchStart = agentIdx;
+	for (; agentIdx < Math.min(agentIds.length, batchStart + BATCH_SIZE); agentIdx++) {
+		urls.push(`/v${API_VERSION}/agents/${agentIds[agentIdx]}`);
 	}
 	let requests = urls.map((url) => fetch(url));
 	Promise.all(requests)
@@ -499,6 +507,12 @@ async function renderCharts(chart, agentIdToState) {
 			dataItems.forEach((resJson) => {
 				let ss = resJson['results']['operational_state'];
 				let uuid = resJson['results']['id'];
+				
+				if (agentIdToState.has(uuid)) {
+					let oldState = agentIdToState.get(uuid).operational_state;
+					statusArray[oldState]--;
+				}
+				
 				statusArray[ss]++;
 				agentIdToState.set(uuid, resJson['results']);
 			});
